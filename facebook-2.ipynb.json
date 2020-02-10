@@ -1,0 +1,367 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {
+    "colab_type": "text",
+    "id": "HPBNmbZnZxoh"
+   },
+   "source": [
+    "We associate to each person a life-style vector (features : how much he likes politics,...)\n",
+    "We propose a friend-matching matrix to represent the similarity between persons' life styles"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "mOthJcPgYMS2"
+   },
+   "outputs": [],
+   "source": [
+    "import scipy.sparse as sparse\n",
+    "import random \n",
+    "\n",
+    "\n",
+    "import numpy as np\n",
+    "import scipy \n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 109,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "fq2aailyO6x0"
+   },
+   "outputs": [],
+   "source": [
+    "class Env:\n",
+    "\n",
+    "    def __init__(self, users_feat, seed=None):\n",
+    "        self.users_feat = users_feat\n",
+    "        nb_users , k =users_feat.shape\n",
+    "        self.k=k\n",
+    "        self.nb_users=nb_users\n",
+    "        self.reward_matrix =f(self.users_feat,self.nb_users) \n",
+    "        #self.possible_match =np.zeros((self.reward_matrix.shape[0],self.reward_matrix.shape[0]))\n",
+    "        self.possible_match =np.identity((self.reward_matrix.shape[0]))\n",
+    "        self.interactions =  sparse.random(nb_users, nb_users, density=0.25)\n",
+    "\n",
+    "        self.nb_users = nb_users\n",
+    "    def step(self):\n",
+    "        \"\"\" Play an action \"\"\"\n",
+    "        #choose a random user\n",
+    "        currUserId =np.random.randint(low=0, high=self.nb_users)\n",
+    "        #list of possible matches\n",
+    "        list_possible_friends= np.where(self.possible_match[currUserId,:]==0)[0]\n",
+    "        \n",
+    "        return currUserId, list_possible_friends\n",
+    "    \n",
+    "    def update(self, user, friend, reward):\n",
+    "        self.possible_match[user, friend] =1\n",
+    "        self.interactions = sparse.csr_matrix(self.interactions)\n",
+    "        self.interactions[user, friend]=reward\n",
+    "        #self.interactions.toarray()\n",
+    "        return self.interactions\n",
+    "     \n",
+    "    def reset(self, seed=None):\n",
+    "        np.random.seed(42)\n",
+    "        self.interactions = sparse.random(nb_users, nb_users, density=0.25)\n",
+    "        self.interactions.setdiag(np.ones(nb_users))\n",
+    "        self.interactions.toarray()\n",
+    "        rows = sparse.find(self.interactions)[0]\n",
+    "        cols = sparse.find(self.interactions)[1]\n",
+    "        possible_match =np.identity((self.reward_matrix.shape[0]))\n",
+    "        for i in range(len(rows)):\n",
+    "            possible_match[rows[i],cols[i]]=1\n",
+    "        self.possible_match = possible_match\n",
+    "        return self.possible_match, self.interactions\n",
+    "    \n",
+    "    def calc_real_reward(self, pred_reward ):\n",
+    "        return (0.6*pred_reward + 0.4*np.random.uniform(0, 1))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 110,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "YnkX8TXzWjo5"
+   },
+   "outputs": [],
+   "source": [
+    "def f(users,n):\n",
+    "  r= np.zeros((n,n))\n",
+    "  for user, u in enumerate(users):\n",
+    "    for user2, u2  in enumerate (users):\n",
+    "      u_norm=np.linalg.norm(u)\n",
+    "      u2_norm=np.linalg.norm(u2)\n",
+    "      reward = round(np.dot(u,u2)/(u_norm*u2_norm)*5)+1\n",
+    "      r[user,user2]=reward\n",
+    "      #r[user,item]=round(users[i]*items[j]/ (np.linalg.norm(users)*np.linalg.norm(items))*5)+1\n",
+    "\n",
+    "  return r"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 111,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "k7YsxEqAaIwf"
+   },
+   "outputs": [],
+   "source": [
+    "class RandomAgent:\n",
+    "  def __init__(self):\n",
+    "    pass\n",
+    "  def action(self, user_id, items_available):\n",
+    "    return np.random.choice(items_available)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 112,
+   "metadata": {
+    "colab": {},
+    "colab_type": "code",
+    "id": "vJaKkHkEGa5o"
+   },
+   "outputs": [],
+   "source": [
+    "nb_users = 10\n",
+    "means= np.array([0,0,0])\n",
+    "stds = np.array([1.,3.,5.])\n",
+    "k=3\n",
+    "users_features = np.random.normal(loc=means, scale=stds, size=(nb_users,k))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 113,
+   "metadata": {
+    "colab": {
+     "base_uri": "https://localhost:8080/",
+     "height": 1000
+    },
+    "colab_type": "code",
+    "id": "oysYtYWDGdSG",
+    "outputId": "ee08922e-06aa-48b0-aec9-40eed89d370e"
+   },
+   "outputs": [],
+   "source": [
+    "#env = Env(users_features)\n",
+    "#agent=RandomAgent()\n",
+    "#nb_iters = 20\n",
+    "\n",
+    "#for t in range(nb_iters):\n",
+    "#    user_id, friends_to_recommend= env.step()\n",
+    "#    friend_chosen=agent.action(user_id, friends_to_recommend)\n",
+    "#    print(\"user_id =\",user_id, \"items_to_recommend=\",friends_to_recommend,\"friend_chosen=\",friend_chosen)\n",
+    "#    reward = env.update(user_id,friend_chosen)\n",
+    "#    print(\"reward:{}\\n\".format(reward))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 119,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def similarity(interactions):\n",
+    "    \n",
+    "    # vecteur contenant pour chaque utilisateur le nombre de notes données\n",
+    "    r_user = (interactions>0).sum(axis=1)  \n",
+    "    \n",
+    "    # vecteur contenant pour chaque utilisateur la moyenne des notes données\n",
+    "    m_user = np.divide(interactions.sum(axis=1) , r_user, where=r_user!=0)\n",
+    "    \n",
+    "    # Notes recentrées par la moyenne par utilisateur : chaque ligne i contient le vecteur \\bar r_i\n",
+    "    interactions_ctr = interactions.T - ((interactions.T!=0) * m_user)\n",
+    "    interactions_ctr = interactions_ctr.T\n",
+    "\n",
+    "    # Matrice de Gram, contenant les produits scalaires\n",
+    "    sim = interactions_ctr.dot(interactions_ctr.T)\n",
+    "    \n",
+    "    # Renormalisation\n",
+    "    norms = np.array([np.sqrt(np.diagonal(sim))])\n",
+    "    norms[0][7]=1\n",
+    "    \n",
+    "    sim = sim / norms / norms.T  \n",
+    "    # (En numpy, diviser une matrice par un vecteur ligne (resp. colonne) \n",
+    "    # revient à diviser chaque ligne (resp. colonne) terme à terme par les éléments du vecteur)\n",
+    "    \n",
+    "    return sim"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 120,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def phi(x):\n",
+    "    return np.maximum(x,0)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 121,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def predict_interactions(interactions,sim,phi=(lambda x:x)):\n",
+    "    \n",
+    "    wsum_sim = np.abs(phi(sim)).dot(interactions>0)\n",
+    "    return np.divide(phi(sim).dot(interactions) , wsum_sim, where= wsum_sim!=0)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 122,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "class MemoryBasedAgent:\n",
+    "    def __init__(self, interactions):\n",
+    "        self._interactions=interactions\n",
+    "        pass\n",
+    "    def action(self, user_id, ratings, friends_to_recommend):\n",
+    "        #print('ratings avant', ratings)\n",
+    "        ratings = ratings.toarray()\n",
+    "        #print('ratings apres',(ratings))\n",
+    "        sim = similarity(ratings)\n",
+    "        #print('similarity', sim)\n",
+    "        pred_interactions = predict_interactions(ratings,sim,phi)\n",
+    "        #print('pred_interactions', pred_interactions)\n",
+    "        ratings_of_user = pred_interactions[user_id][:]\n",
+    "        idx_max = friends_to_recommend[0]\n",
+    "        max_friend = ratings_of_user[friends_to_recommend[0]]\n",
+    "        #print('ratings_user', ratings_of_user)\n",
+    "        for j in friends_to_recommend:\n",
+    "            if (ratings_of_user[j]>max_friend):\n",
+    "                max_friend = ratings_of_user[j]\n",
+    "                idx_max = j\n",
+    "        pred_reward = ratings_of_user[idx_max]\n",
+    "        \n",
+    "        return idx_max, pred_reward"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 123,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "user_id = 2 items_to_recommend= [0 3 5 6 7 8 9] friend_chosen= 0\n",
+      "real_reward 0.6125716742746937\n",
+      "user_id = 6 items_to_recommend= [0 1 3 4 5 8 9] friend_chosen= 0\n",
+      "real_reward 0.1901480892728447\n",
+      "user_id = 3 items_to_recommend= [0 1 2 4 6 9] friend_chosen= 9\n",
+      "real_reward 0.9630265895704372\n",
+      "user_id = 6 items_to_recommend= [1 3 4 5 8 9] friend_chosen= 3\n",
+      "real_reward 0.8417669517111269\n",
+      "user_id = 3 items_to_recommend= [0 1 2 4 6] friend_chosen= 4\n",
+      "real_reward 0.7407174130917993\n",
+      "user_id = 6 items_to_recommend= [1 4 5 8 9] friend_chosen= 9\n",
+      "real_reward 0.6937165349077696\n",
+      "user_id = 5 items_to_recommend= [0 1 2 3 6 7 8 9] friend_chosen= 2\n",
+      "real_reward 0.9521871356061031\n",
+      "user_id = 9 items_to_recommend= [0 1 2 4 5 7 8] friend_chosen= 4\n",
+      "real_reward 0.7676785996808464\n",
+      "user_id = 8 items_to_recommend= [0 2 3 4 5 6 7 9] friend_chosen= 0\n",
+      "real_reward 0.6421977039321082\n",
+      "user_id = 3 items_to_recommend= [0 1 2 6] friend_chosen= 6\n",
+      "real_reward 0.698623782203639\n",
+      "user_id = 9 items_to_recommend= [0 1 2 5 7 8] friend_chosen= 5\n",
+      "real_reward 0.4756403535294593\n",
+      "user_id = 8 items_to_recommend= [2 3 4 5 6 7 9] friend_chosen= 4\n",
+      "real_reward 0.7272013899887455\n",
+      "user_id = 0 items_to_recommend= [2 4 5 6] friend_chosen= 4\n",
+      "real_reward 0.5451737337471014\n",
+      "user_id = 8 items_to_recommend= [2 3 5 6 7 9] friend_chosen= 7\n",
+      "real_reward 0.7797199367857444\n",
+      "user_id = 8 items_to_recommend= [2 3 5 6 9] friend_chosen= 6\n",
+      "real_reward 0.5451344490135694\n",
+      "user_id = 5 items_to_recommend= [0 1 3 6 7 8 9] friend_chosen= 8\n",
+      "real_reward 0.7143220677049059\n",
+      "user_id = 8 items_to_recommend= [2 3 5 9] friend_chosen= 3\n",
+      "real_reward 0.5914599893214286\n",
+      "user_id = 0 items_to_recommend= [2 5 6] friend_chosen= 5\n",
+      "real_reward 0.6479461469334731\n",
+      "user_id = 7 items_to_recommend= [0 1 2 3 4 5 6 8 9] friend_chosen= 0\n",
+      "real_reward 0.3771638815650077\n",
+      "user_id = 5 items_to_recommend= [0 1 3 6 7 9] friend_chosen= 3\n",
+      "real_reward 0.6808740192846493\n"
+     ]
+    }
+   ],
+   "source": [
+    "env = Env(users_features)\n",
+    "possible_match, interactions = env.reset(seed=None)\n",
+    "agent=MemoryBasedAgent(interactions)\n",
+    "nb_iters = 20\n",
+    "\n",
+    "for t in range(nb_iters):\n",
+    "    user_id, friends_to_recommend= env.step()\n",
+    "    friend_chosen, pred_reward =agent.action(user_id, interactions, friends_to_recommend)\n",
+    "    print(\"user_id =\",user_id, \"items_to_recommend=\",friends_to_recommend,\"friend_chosen=\",friend_chosen)\n",
+    "    real_reward = env.calc_real_reward(pred_reward)\n",
+    "    #print('int _avant',interactions.toarray())\n",
+    "    interactions = env.update(user_id,friend_chosen,real_reward)\n",
+    "    print('real_reward', real_reward)\n",
+    "    #print('int',interactions.toarray())\n",
+    "    #print(\"reward:{}\\n\".format(reward))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "colab": {
+   "collapsed_sections": [],
+   "name": "facebook.ipynb",
+   "provenance": []
+  },
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.5"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 1
+}
